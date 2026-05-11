@@ -31,11 +31,11 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 const pool = mysql.createPool({
     // الربط الذكي: يحاول الاتصال بالإنترنت أولاً، ثم بجهازك محلياً
-    host: process.env.MYSQLHOST ,
-    user: process.env.MYSQLUSER ,
-    password: process.env.MYSQLPASSWORD ,
-    database: process.env.MYSQLDATABASE ,
-    port: process.env.MYSQLPORT ,
+    host: process.env.MYSQLHOST || "localhost",
+    user: process.env.MYSQLUSER || "root",
+    password: process.env.MYSQLPASSWORD || "Root@123", 
+    database: process.env.MYSQLDATABASE || "gas_station_db",
+    port: process.env.MYSQLPORT || 3306,
     
     waitForConnections: true,
     connectionLimit: 10,
