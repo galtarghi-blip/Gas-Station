@@ -19,15 +19,39 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "../public")));
 
 // MySQL Connection Pool
+// const pool = mysql.createPool({
+//     host: "localhost",
+//     user: "root",
+//     password: "Root@123",
+//     database: "gas_station_db",
+//     waitForConnections: true,
+//     connectionLimit: 10,
+//     queueLimit: 0
+// });
+
 const pool = mysql.createPool({
-    host: "localhost",
-    user: "root",
-    password: "Root@123",
-    database: "gas_station_db",
+    // الربط الذكي: يحاول الاتصال بالإنترنت أولاً، ثم بجهازك محلياً
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "Root@123", 
+    database: process.env.DB_NAME || "gas_station_db",
+    port: process.env.DB_PORT || 3306,
+    
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+
+    // تفعيل التشفير فقط عندما نكون على السيرفر (Render + Railway)
+    ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false
 });
+
+
+
+
+
+
+
+
 
 // Server-side session store
 const sessions = new Map();
