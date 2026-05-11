@@ -561,6 +561,54 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
+
+
+
+
+
+
+
+
+
+console.log("🚀 محاولة بدء عملية الـ Seed...");
+
+async function seedDatabase() {
+    try {
+        console.log("🔗 جاري التحقق من الاتصال بقاعدة البيانات...");
+        
+        // جرب تنفيذ استعلام بسيط أولاً للتأكد من أن الاتصال شغال
+        await connection.query("SELECT 1");
+        console.log("✅ الاتصال بقاعدة البيانات ناجح!");
+
+        const superAdminHash = await hashPassword("admin123");
+        
+        console.log("📝 محاولة إدخال السوبر أدمن...");
+        const result = await connection.query(
+            "INSERT INTO admins (username, password_hash, full_name, role) VALUES (?, ?, ?, 'super_admin')",
+            ["admin", superAdminHash, "مدير الموقع"]
+        );
+        
+        console.log("✅ تمت الإضافة بنجاح! تفاصيل النتيجة:", result);
+    } catch (e) {
+        console.error("❌ فشلت عملية الـ Seed لسبب ما:");
+        console.error("الرسالة:", e.message);
+        console.error("الكود:", e.code);
+    }
+}
+
+// استدعاء الدالة فوراً
+seedDatabase();
+
+
+
+
+
+
+
+
+
+
+
 // Start server
 initDatabase().then(() => {
     app.listen(PORT, () => {
