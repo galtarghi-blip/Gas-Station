@@ -34,7 +34,7 @@ const pool = mysql.createPool({
     host: process.env.MYSQLHOST || "localhost",
     user: process.env.MYSQLUSER || "root",
     password: process.env.MYSQLPASSWORD || "Root@123", 
-    database: process.env.MYSQLDATABASE || "gas_station_db",
+    database: process.env.MYSQL_DATABASE || "gas_station_db",
     port: process.env.MYSQLPORT || 3306,
     
     waitForConnections: true,
