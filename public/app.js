@@ -1,5 +1,5 @@
 // Map page JavaScript - Citizens view
-const API_BASE = "http://localhost:3000";
+const API_BASE = "https://gas-station-kq3v.onrender.com";
 
 // State
 let map;

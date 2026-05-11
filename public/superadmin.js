@@ -1,5 +1,5 @@
 // Super Admin Dashboard JavaScript
-const API = "http://localhost:3000";
+const API = "https://gas-station-kq3v.onrender.com";
 
 let token = sessionStorage.getItem("admin_token") || null;
 let superInfo = null;

@@ -1,5 +1,5 @@
 // Admin Dashboard JavaScript
-const API = "http://localhost:3000";
+const API = "https://gas-station-kq3v.onrender.com";
 
 // Session token stored in sessionStorage (clears when browser closes)
 let token = sessionStorage.getItem("admin_token") || null;
