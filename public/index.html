@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
+
 <body>
     <!-- Header -->
     <header class="hero-header" id="mainHeader">
@@ -39,36 +41,55 @@
     <!-- Map -->
     <div id="map"></div>
 
-    <!-- Side Panel -->
-    <div class="side-panel" id="sidePanel">
-        <!-- Search -->
-        <div class="panel-card">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="ابحث عن محطة أو مدينة...">
-                <span class="search-icon">🔍</span>
+    <!-- Side Panel (mobile: draggable bottom sheet — starts collapsed so map stays visible) -->
+    <div class="side-panel sheet-state-collapsed" id="sidePanel" data-sheet-state="collapsed">
+        <div class="sheet-peek" id="sheetPeek">
+            <button type="button" class="sheet-handle" id="sheetHandle" aria-controls="sheetBody" aria-expanded="false"
+                aria-label="سحب أو ضغط لتوسيع لوحة البحث والمحطات"></button>
+            <div class="sheet-peek-meta">
+                <span class="sheet-peek-label">المحطات المعروضة</span>
+                <span class="sheet-peek-badge" id="sheetPeekCount">0</span>
+                <span class="sheet-peek-hint">اسحب للأعلى أو اضغط</span>
             </div>
         </div>
-
-        <!-- Filters -->
-        <div class="panel-card">
-            <h3>تصفية النتائج</h3>
-            <div class="filter-chips">
-                <button class="chip active" data-filter="all">الكل</button>
-                <button class="chip" data-filter="active">نشطة فقط</button>
-                <button class="chip" data-filter="benzine">بنزين</button>
-                <button class="chip" data-filter="diesel">ديزل</button>
-                <button class="chip" data-filter="both">بنزين + ديزل</button>
+        <div class="sheet-body" id="sheetBody">
+            <!-- Search -->
+            <div class="panel-card">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="ابحث عن محطة أو مدينة...">
+                    <span class="search-icon">🔍</span>
+                </div>
             </div>
-        </div>
 
-        <!-- Station List -->
-        <div class="panel-card">
-            <h3>المحطات (<span id="filteredCount">0</span>)</h3>
-            <div class="station-list" id="stationList">
-                <div class="loading-spinner"><div class="spinner"></div></div>
+            <!-- Filters -->
+            <div class="panel-card">
+                <h3>تصفية النتائج</h3>
+                <div class="filter-chips">
+                    <button class="chip active" data-filter="all">الكل</button>
+                    <button class="chip" data-filter="active">نشطة فقط</button>
+                    <button class="chip" data-filter="benzine">بنزين</button>
+                    <button class="chip" data-filter="diesel">ديزل</button>
+                    <button class="chip" data-filter="both">بنزين + ديزل</button>
+                </div>
+            </div>
+
+            <!-- Station List -->
+            <div class="panel-card">
+                <h3>المحطات (<span id="filteredCount">0</span>)</h3>
+                <div class="station-list" id="stationList">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Mobile: quick open search / sheet (above collapsed strip) -->
+    <button type="button" class="sheet-quick-search" id="sheetQuickSearch" aria-label="فتح البحث والنتائج">
+        <span class="sheet-quick-search-icon" aria-hidden="true">🔍</span>
+        <span>بحث وتصفية</span>
+    </button>
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
@@ -76,4 +97,5 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
+
 </html>

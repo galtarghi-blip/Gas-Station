@@ -7,6 +7,130 @@ let markers = [];
 let allStations = [];
 let currentFilter = "all";
 
+const SHEET_MQ = "(max-width: 768px)";
+
+function isMobileSheetLayout() {
+    return window.matchMedia(SHEET_MQ).matches;
+}
+
+function setSheetState(state) {
+    const panel = document.getElementById("sidePanel");
+    const handle = document.getElementById("sheetHandle");
+    if (!panel || !isMobileSheetLayout()) return;
+
+    ["collapsed", "half", "full"].forEach(s => panel.classList.remove(`sheet-state-${s}`));
+    panel.classList.add(`sheet-state-${state}`);
+    panel.dataset.sheetState = state;
+    if (handle) {
+        handle.setAttribute("aria-expanded", state === "collapsed" ? "false" : "true");
+    }
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+    }, 420);
+}
+
+function cycleSheetState() {
+    const panel = document.getElementById("sidePanel");
+    if (!panel) return;
+    const order = ["collapsed", "half", "full"];
+    const cur = panel.dataset.sheetState || "collapsed";
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    setSheetState(next);
+}
+
+function sheetExpandOne() {
+    const cur = document.getElementById("sidePanel")?.dataset.sheetState;
+    if (cur === "collapsed") setSheetState("half");
+    else if (cur === "half") setSheetState("full");
+}
+
+function sheetCollapseOne() {
+    const cur = document.getElementById("sidePanel")?.dataset.sheetState;
+    if (cur === "full") setSheetState("half");
+    else if (cur === "half") setSheetState("collapsed");
+}
+
+function initMobileBottomSheet() {
+    const panel = document.getElementById("sidePanel");
+    const peek = document.getElementById("sheetPeek");
+    const quick = document.getElementById("sheetQuickSearch");
+    const searchInput = document.getElementById("searchInput");
+    if (!panel || !peek) return;
+
+    const mq = window.matchMedia(SHEET_MQ);
+
+    const resetDesktopSheet = () => {
+        if (mq.matches) return;
+        ["collapsed", "half", "full"].forEach(s => panel.classList.remove(`sheet-state-${s}`));
+        panel.classList.add("sheet-state-collapsed");
+        panel.dataset.sheetState = "collapsed";
+        const handle = document.getElementById("sheetHandle");
+        if (handle) handle.setAttribute("aria-expanded", "false");
+        setTimeout(() => map && map.invalidateSize(), 80);
+    };
+
+    mq.addEventListener("change", resetDesktopSheet);
+
+    let peekPointerId = null;
+    let peekStartY = 0;
+    let peekLastDy = 0;
+    let peekDrag = false;
+
+    peek.addEventListener("pointerdown", e => {
+        if (!mq.matches) return;
+        peekPointerId = e.pointerId;
+        peekStartY = e.clientY;
+        peekLastDy = 0;
+        peekDrag = false;
+        try {
+            peek.setPointerCapture(e.pointerId);
+        } catch (_) { /* noop */ }
+    });
+
+    peek.addEventListener("pointermove", e => {
+        if (e.pointerId !== peekPointerId || !mq.matches) return;
+        peekLastDy = e.clientY - peekStartY;
+        if (Math.abs(peekLastDy) > 14) peekDrag = true;
+    });
+
+    peek.addEventListener("pointerup", e => {
+        if (e.pointerId !== peekPointerId || !mq.matches) return;
+        try {
+            peek.releasePointerCapture(e.pointerId);
+        } catch (_) { /* noop */ }
+        peekPointerId = null;
+
+        if (peekDrag && Math.abs(peekLastDy) >= 48) {
+            if (peekLastDy < 0) sheetExpandOne();
+            else sheetCollapseOne();
+        } else {
+            cycleSheetState();
+        }
+        peekDrag = false;
+    });
+
+    peek.addEventListener("pointercancel", e => {
+        if (e.pointerId !== peekPointerId) return;
+        peekPointerId = null;
+        peekDrag = false;
+    });
+
+    if (quick) {
+        quick.addEventListener("click", () => {
+            if (!mq.matches) return;
+            setSheetState("half");
+            requestAnimationFrame(() => searchInput && searchInput.focus());
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener("focus", () => {
+            if (!mq.matches) return;
+            if (panel.dataset.sheetState === "collapsed") setSheetState("half");
+        });
+    }
+}
+
 // Toast notification
 function showToast(message, type = "success") {
     const container = document.getElementById("toastContainer");
@@ -113,6 +237,8 @@ function renderMarkers(stations) {
 function renderStationList(stations) {
     const list = document.getElementById("stationList");
     document.getElementById("filteredCount").textContent = stations.length;
+    const peekCount = document.getElementById("sheetPeekCount");
+    if (peekCount) peekCount.textContent = stations.length;
 
     if (stations.length === 0) {
         list.innerHTML = `<div class="no-stations">لا توجد محطات مطابقة للبحث</div>`;
@@ -229,5 +355,6 @@ function setupEvents() {
 document.addEventListener("DOMContentLoaded", () => {
     initMap();
     setupEvents();
+    initMobileBottomSheet();
     fetchStations();
 });
