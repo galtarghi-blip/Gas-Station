@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="لوحة تحكم مدير الموقع - إدارة حسابات مديري المحطات">
+    <title>وقودي - مدير الموقع</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- AUTH PAGE -->
+    <div class="auth-page" id="authPage">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <div class="logo-icon" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">🛡️</div>
+                    <h2>وقودي</h2>
+                    <p>دخول مدير الموقع</p>
+                </div>
+
+                <div class="auth-error" id="authError"></div>
+
+                <form id="superLoginForm">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="loginUsername" placeholder="أدخل اسم المستخدم" required>
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور</label>
+                        <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;background:linear-gradient(135deg,#3b82f6,#6366f1);">
+                        تسجيل الدخول
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUPER ADMIN DASHBOARD -->
+    <div class="admin-layout" id="superDashboard" style="display:none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="logo-section">
+                <div class="logo-icon" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">🛡️</div>
+                <div class="logo-text">
+                    <h1>وقودي</h1>
+                    <span>مدير الموقع</span>
+                </div>
+            </div>
+
+            <nav class="admin-nav">
+                <button class="nav-item active" data-section="overview">
+                    <span class="nav-icon">📊</span> نظرة عامة
+                </button>
+                <button class="nav-item" data-section="managers">
+                    <span class="nav-icon">👥</span> مديري المحطات
+                </button>
+                <button class="nav-item" data-section="create-manager">
+                    <span class="nav-icon">➕</span> إنشاء حساب مدير
+                </button>
+                <button class="nav-item" data-section="all-stations">
+                    <span class="nav-icon">⛽</span> جميع المحطات
+                </button>
+            </nav>
+
+            <a href="index.html" class="nav-item" style="margin-top:8px;color:var(--accent);text-decoration:none;">
+                <span class="nav-icon">🗺️</span> فتح الخريطة
+            </a>
+            <button class="nav-item" id="logoutBtn" style="color:var(--danger);">
+                <span class="nav-icon">🚪</span> تسجيل الخروج
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-topbar">
+                <div>
+                    <p class="welcome-text">مرحباً،</p>
+                    <h2 id="welcomeName">مدير الموقع</h2>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-icon blue">👥</div>
+                    <div class="stat-card-info">
+                        <h4 id="totalManagers">0</h4>
+                        <p>مديري المحطات</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon green">⛽</div>
+                    <div class="stat-card-info">
+                        <h4 id="totalStations">0</h4>
+                        <p>إجمالي المحطات</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon orange">✅</div>
+                    <div class="stat-card-info">
+                        <h4 id="activeStations">0</h4>
+                        <p>محطات نشطة الآن</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overview Section -->
+            <div class="content-section active" id="overviewSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>آخر المديرين المسجلين</h3>
+                    </div>
+                    <div id="recentManagers" style="padding:20px;">
+                        <div class="loading-spinner"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Managers Section -->
+            <div class="content-section" id="managersSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>جميع مديري المحطات</h3>
+                    </div>
+                    <div id="allManagersList" style="padding:20px;">
+                        <div class="loading-spinner"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Manager Section -->
+            <div class="content-section" id="createManagerSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>إنشاء حساب مدير محطة جديد</h3>
+                    </div>
+                    <div style="padding:24px;max-width:500px;">
+                        <form id="createManagerForm">
+                            <div class="form-group">
+                                <label>الاسم الكامل</label>
+                                <input type="text" id="mgrFullName" placeholder="مثال: أحمد محمد" required>
+                            </div>
+                            <div class="form-group">
+                                <label>اسم المستخدم</label>
+                                <input type="text" id="mgrUsername" placeholder="اسم الدخول" required>
+                            </div>
+                            <div class="form-group">
+                                <label>رقم الهاتف</label>
+                                <input type="tel" id="mgrPhone" placeholder="09XXXXXXXX">
+                            </div>
+                            <div class="form-group">
+                                <label>كلمة المرور</label>
+                                <input type="text" id="mgrPassword" placeholder="6 أحرف على الأقل" required minlength="6">
+                                <p class="form-hint">💡 شارك بيانات الدخول مع مدير المحطة</p>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">
+                                    إنشاء الحساب
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Success card for new account -->
+                        <div id="newAccountCard" style="display:none;margin-top:24px;background:var(--bg-secondary);border:1px solid var(--accent);border-radius:var(--radius);padding:20px;">
+                            <h4 style="color:var(--accent);margin-bottom:12px;">✅ تم إنشاء الحساب بنجاح</h4>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">شارك هذه البيانات مع مدير المحطة:</p>
+                            <div style="background:var(--bg-primary);padding:12px;border-radius:8px;font-family:monospace;font-size:14px;">
+                                <p>اسم المستخدم: <strong id="createdUsername" style="color:var(--accent);"></strong></p>
+                                <p>كلمة المرور: <strong id="createdPassword" style="color:var(--accent);"></strong></p>
+                            </div>
+                            <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">رابط الدخول: <span style="color:var(--accent);">http://localhost:5500/admin.html</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Stations Section -->
+            <div class="content-section" id="allStationsSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>جميع المحطات في النظام</h3>
+                    </div>
+                    <div class="stations-grid" id="allStationsGrid">
+                        <div class="loading-spinner"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="superadmin.js"></script>
+</body>
+</html>

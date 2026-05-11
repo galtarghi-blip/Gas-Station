@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="لوحة تحكم مدير محطة الوقود - إدارة حالة المحطة">
+    <title>وقودي - لوحة التحكم</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <!-- AUTH PAGE -->
+    <div class="auth-page" id="authPage">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <div class="logo-icon">⛽</div>
+                    <h2>وقودي</h2>
+                    <p>تسجيل دخول مدير المحطة</p>
+                </div>
+
+                <div class="auth-error" id="authError"></div>
+
+                <!-- Login Form -->
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="loginUsername" placeholder="أدخل اسم المستخدم" required>
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور</label>
+                        <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;">
+                        تسجيل الدخول
+                    </button>
+                    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-muted);">
+                        ليس لديك حساب؟ تواصل مع مدير الموقع
+                    </p>
+                </form>
+                <a href="index.html" class="btn btn-outline" style="width:100%;justify-content:center;margin-top:16px;font-size:13px;">
+                    🗺️ الرجوع إلى الخريطة
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div class="admin-layout" id="adminDashboard" style="display:none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="logo-section">
+                <div class="logo-icon">⛽</div>
+                <div class="logo-text">
+                    <h1>وقودي</h1>
+                    <span id="adminName">لوحة التحكم</span>
+                </div>
+            </div>
+
+            <nav class="admin-nav">
+                <button class="nav-item active" data-section="dashboard">
+                    <span class="nav-icon">📊</span> الرئيسية
+                </button>
+                <button class="nav-item" data-section="stations">
+                    <span class="nav-icon">⛽</span> محطاتي
+                </button>
+                <button class="nav-item" data-section="add-station">
+                    <span class="nav-icon">➕</span> إضافة محطة
+                </button>
+            </nav>
+
+            <button class="nav-item" id="logoutBtn" style="margin-top:auto;color:var(--danger);">
+                <span class="nav-icon">🚪</span> تسجيل الخروج
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Top bar -->
+            <div class="admin-topbar">
+                <div>
+                    <p class="welcome-text">مرحباً بك،</p>
+                    <h2 id="welcomeName">مدير المحطة</h2>
+                </div>
+                <button class="btn btn-primary" id="addStationTopBtn">
+                    ➕ إضافة محطة جديدة
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-card-icon green">⛽</div>
+                    <div class="stat-card-info">
+                        <h4 id="myTotalStations">0</h4>
+                        <p>إجمالي محطاتي</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon blue">✅</div>
+                    <div class="stat-card-info">
+                        <h4 id="myActiveStations">0</h4>
+                        <p>محطات نشطة</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon orange">⏸️</div>
+                    <div class="stat-card-info">
+                        <h4 id="myInactiveStations">0</h4>
+                        <p>محطات متوقفة</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div class="content-section active" id="dashboardSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>تحكم سريع بمحطاتك</h3>
+                    </div>
+                    <div class="stations-grid" id="quickStationsGrid">
+                        <div class="loading-spinner"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Stations Section -->
+            <div class="content-section" id="stationsSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>جميع محطاتي</h3>
+                    </div>
+                    <div class="stations-grid" id="allStationsGrid">
+                        <div class="loading-spinner"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Station Section -->
+            <div class="content-section" id="addStationSection">
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3>إضافة محطة وقود جديدة</h3>
+                    </div>
+                    <div style="padding:24px;max-width:800px;">
+                        <form id="addStationForm">
+                            <div class="form-group">
+                                <label>اسم المحطة</label>
+                                <input type="text" id="stationName" placeholder="مثال: محطة النور" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>المدينة</label>
+                                    <input type="text" id="stationCity" placeholder="مثال: طرابلس" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>نوع الوقود</label>
+                                    <select id="stationFuelType">
+                                        <option value="benzine">بنزين</option>
+                                        <option value="diesel">ديزل</option>
+                                        <option value="both">بنزين + ديزل</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>العنوان التفصيلي</label>
+                                <input type="text" id="stationAddress" placeholder="مثال: شارع الجمهورية بجانب مصرف الجمهورية">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>خط العرض (Latitude)</label>
+                                    <input type="number" step="any" id="stationLat" placeholder="32.9024" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>خط الطول (Longitude)</label>
+                                    <input type="number" step="any" id="stationLng" placeholder="13.1800" required>
+                                </div>
+                            </div>
+                            <p class="form-hint">💡 يمكنك الحصول على الإحداثيات من خرائط Google بالنقر على الموقع</p>
+
+                            <!-- Mini map for picking location -->
+                            <div class="form-group" style="margin-top:16px;">
+                                <label>أو اختر الموقع من الخريطة (انقر على الخريطة)</label>
+                                <div id="pickMap" style="height:450px;border-radius:12px;border:1px solid var(--border);margin-top:8px;"></div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">إضافة المحطة</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
