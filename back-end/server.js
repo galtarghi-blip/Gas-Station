@@ -31,11 +31,11 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 const pool = mysql.createPool({
     // الربط الذكي: يحاول الاتصال بالإنترنت أولاً، ثم بجهازك محلياً
-    host: process.env.MYSQLHOST || "localhost",
-    user: process.env.MYSQLUSER || "root",
-    password: process.env.MYSQLPASSWORD || "Root@123", 
-    database: process.env.MYSQLDATABASE || "gas_station_db",
-    port: process.env.MYSQLPORT || 3306,
+    host: process.env.MYSQLHOST ,
+    user: process.env.MYSQLUSER ,
+    password: process.env.MYSQLPASSWORD ,
+    database: process.env.MYSQLDATABASE ,
+    port: process.env.MYSQLPORT ,
     
     waitForConnections: true,
     connectionLimit: 10,
@@ -612,9 +612,9 @@ seedDatabase();
 // Start server
 initDatabase().then(() => {
     app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-        console.log(`Map page: http://localhost:${PORT}`);
-        console.log(`Admin page: http://localhost:${PORT}/admin`);
-        console.log(`Super Admin: http://localhost:${PORT}/superadmin`);
+        console.log(`Server is running on https://gas-station-kq3v.onrender.com:${PORT}`);
+        console.log(`Map page: https://gas-station-kq3v.onrender.com:${PORT}`);
+        console.log(`Admin page: https://gas-station-kq3v.onrender.com:${PORT}/admin`);
+        console.log(`Super Admin: https://gas-station-kq3v.onrender.com:${PORT}/superadmin`);
     });
 });
