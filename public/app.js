@@ -204,12 +204,13 @@ function timeAgo(dateStr) {
 function buildPopup(station) {
     const statusClass = station.is_active ? "active" : "inactive";
     const statusText = station.is_active ? "متوفر الآن" : "غير متوفر";
+    const addr = station.address ? " - " + escapeHtml(station.address) : "";
     return `
         <div class="popup-content">
-            <h4>${station.name}</h4>
-            <p>📍 ${station.city}${station.address ? " - " + station.address : ""}</p>
+            <h4>${escapeHtml(station.name)}</h4>
+            <p>📍 ${escapeHtml(station.city)}${addr}</p>
             <p>⛽ ${fuelLabel(station.fuel_type)}</p>
-            <p>👤 ${station.manager_name}</p>
+            <p>👤 ${escapeHtml(station.manager_name)}</p>
             <p>🕐 آخر تحديث: ${timeAgo(station.last_status_update)}</p>
             <span class="popup-status ${statusClass}">${statusText}</span>
         </div>
@@ -249,8 +250,8 @@ function renderStationList(stations) {
         <div class="station-item" data-id="${s.id}" data-lat="${s.latitude}" data-lng="${s.longitude}">
             <span class="station-status-dot ${s.is_active ? "active" : "inactive"}"></span>
             <div class="station-item-info">
-                <h4>${s.name}</h4>
-                <p>${s.city} ${s.address ? "- " + s.address : ""}</p>
+                <h4>${escapeHtml(s.name)}</h4>
+                <p>${escapeHtml(s.city)} ${s.address ? "- " + escapeHtml(s.address) : ""}</p>
                 <p style="font-size:10px;color:var(--text-muted);">${timeAgo(s.last_status_update)}</p>
             </div>
             <span class="fuel-badge ${s.fuel_type}">${fuelLabel(s.fuel_type)}</span>

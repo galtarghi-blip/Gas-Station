@@ -133,17 +133,17 @@ function renderManagers(containerId, limit) {
     container.innerHTML = list.map(m => `
         <div class="admin-station-card" style="margin-bottom:12px;">
             <div class="admin-station-card-header">
-                <h4>👤 ${m.full_name}</h4>
+                <h4>👤 ${escapeHtml(m.full_name)}</h4>
                 <span class="status-badge ${m.active_count > 0 ? 'active' : 'inactive'}">${m.station_count} محطة</span>
             </div>
             <div class="station-details">
-                <div class="station-detail"><span class="icon">🔑</span> اسم المستخدم: <strong>${m.username}</strong></div>
-                <div class="station-detail"><span class="icon">📱</span> ${m.phone || "بدون رقم هاتف"}</div>
+                <div class="station-detail"><span class="icon">🔑</span> اسم المستخدم: <strong>${escapeHtml(m.username)}</strong></div>
+                <div class="station-detail"><span class="icon">📱</span> ${escapeHtml(m.phone || "بدون رقم هاتف")}</div>
                 <div class="station-detail"><span class="icon">⛽</span> ${m.station_count} محطة (${m.active_count || 0} نشطة)</div>
                 <div class="station-detail"><span class="icon">📅</span> انضم ${timeAgo(m.created_at)}</div>
             </div>
             <div class="station-actions">
-                <button class="toggle-btn deactivate" onclick="deleteManager(${m.id}, '${m.full_name}')" style="flex:0;">🗑️ حذف</button>
+                <button type="button" class="toggle-btn deactivate" data-delete-manager="${m.id}" style="flex:0;">🗑️ حذف</button>
             </div>
         </div>
     `).join("");
@@ -158,13 +158,13 @@ function renderAllStations() {
     grid.innerHTML = allStations.map(s => `
         <div class="admin-station-card">
             <div class="admin-station-card-header">
-                <h4>${s.name}</h4>
+                <h4>${escapeHtml(s.name)}</h4>
                 <span class="status-badge ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? "نشطة" : "متوقفة"}</span>
             </div>
             <div class="station-details">
-                <div class="station-detail"><span class="icon">📍</span> ${s.city}${s.address ? " - " + s.address : ""}</div>
+                <div class="station-detail"><span class="icon">📍</span> ${escapeHtml(s.city)}${s.address ? " - " + escapeHtml(s.address) : ""}</div>
                 <div class="station-detail"><span class="icon">⛽</span> ${fuelLabel(s.fuel_type)}</div>
-                <div class="station-detail"><span class="icon">👤</span> المدير: ${s.manager_name} (${s.manager_username})</div>
+                <div class="station-detail"><span class="icon">👤</span> المدير: ${escapeHtml(s.manager_name)} (${escapeHtml(s.manager_username)})</div>
                 <div class="station-detail"><span class="icon">🕐</span> ${timeAgo(s.last_status_update)}</div>
             </div>
         </div>
@@ -189,14 +189,25 @@ document.getElementById("createManagerForm").addEventListener("submit", async (e
     } catch (err) { showToast(err.message, "error"); }
 });
 
-async function deleteManager(id, name) {
-    if (!confirm(`هل أنت متأكد من حذف المدير "${name}"؟`)) return;
+async function deleteManager(id) {
+    const mgr = managers.find(m => m.id === id);
+    if (!mgr) return;
+    if (!confirm(`هل أنت متأكد من حذف المدير "${mgr.full_name}"؟`)) return;
     try {
         const data = await apiCall(`${API}/api/super/managers/${id}`, "DELETE");
         showToast(data.message);
         loadData();
     } catch (err) { showToast(err.message, "error"); }
 }
+
+document.body.addEventListener("click", e => {
+    const btn = e.target.closest("[data-delete-manager]");
+    if (!btn) return;
+    const id = parseInt(btn.getAttribute("data-delete-manager"), 10);
+    if (Number.isNaN(id)) return;
+    e.preventDefault();
+    void deleteManager(id);
+});
 
 // INIT
 document.addEventListener("DOMContentLoaded", async () => {

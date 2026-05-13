@@ -2,17 +2,49 @@ const express = require("express");
 const path = require("path");
 const mysql = require("mysql2/promise");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = 3000;
 
-// Middleware: CORS
+app.set("trust proxy", 1);
+
+const DEFAULT_ALLOWED_ORIGINS = [
+    "https://gas-station-kq3v.onrender.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500"
+];
+
+function allowedOriginsList() {
+    const raw = process.env.ALLOWED_ORIGINS;
+    if (raw && String(raw).trim()) {
+        return String(raw).split(",").map(s => s.trim()).filter(Boolean);
+    }
+    return DEFAULT_ALLOWED_ORIGINS;
+}
+
+// Middleware: CORS (specific origins only)
 app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin;
+    const allowed = allowedOriginsList();
+    if (origin && allowed.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+    }
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
     if (req.method === "OPTIONS") return res.sendStatus(200);
     next();
+});
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 80,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "محاولات كثيرة، حاول لاحقاً" }
 });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -55,10 +87,23 @@ const pool = mysql.createPool({
 
 // Server-side session store
 const sessions = new Map();
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-// Helper: hash password
-function hashPassword(password) {
-    return crypto.createHash("sha256").update(password).digest("hex");
+/** Verify password; migrates legacy SHA-256 hashes to bcrypt on success. */
+async function verifyPasswordWithMigration(plain, storedHash, adminId) {
+    if (!storedHash || typeof storedHash !== "string") return false;
+    if (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$") || storedHash.startsWith("$2y$")) {
+        return bcrypt.compare(plain, storedHash);
+    }
+    const legacy = crypto.createHash("sha256").update(plain).digest("hex");
+    if (legacy !== storedHash) return false;
+    try {
+        const newHash = await bcrypt.hash(plain, 12);
+        await pool.query("UPDATE admins SET password_hash = ? WHERE id = ?", [newHash, adminId]);
+    } catch (e) {
+        console.error("Password migration error:", e.message);
+    }
+    return true;
 }
 
 // Helper: generate session token
@@ -78,6 +123,10 @@ function authenticateAdmin(req, res, next) {
         return res.status(401).json({ error: "غير مصرح - يرجى تسجيل الدخول" });
     }
     const session = sessions.get(token);
+    if (session.expiresAt == null || session.expiresAt < Date.now()) {
+        sessions.delete(token);
+        return res.status(401).json({ error: "انتهت الجلسة - يرجى تسجيل الدخول من جديد" });
+    }
     req.adminId = session.id;
     req.adminRole = session.role;
     next();
@@ -90,6 +139,10 @@ function authenticateSuperAdmin(req, res, next) {
         return res.status(401).json({ error: "غير مصرح - يرجى تسجيل الدخول" });
     }
     const session = sessions.get(token);
+    if (session.expiresAt == null || session.expiresAt < Date.now()) {
+        sessions.delete(token);
+        return res.status(401).json({ error: "انتهت الجلسة - يرجى تسجيل الدخول من جديد" });
+    }
     if (session.role !== "super_admin") {
         return res.status(403).json({ error: "صلاحيات غير كافية" });
     }
@@ -122,14 +175,15 @@ async function initDatabase() {
             // Column already exists, ignore
         }
 
-        // Seed super admin account (username: admin, password: admin123)
-        const superAdminHash = hashPassword("admin123");
+        // Seed super admin (username: admin). Password: SUPER_ADMIN_INITIAL_PASSWORD or default admin123 — change in production.
+        const seedPassword = process.env.SUPER_ADMIN_INITIAL_PASSWORD || "admin123";
+        const superAdminHash = await bcrypt.hash(seedPassword, 12);
         try {
             await connection.query(
                 `INSERT INTO admins (username, password_hash, full_name, role) VALUES (?, ?, ?, 'super_admin')`,
                 ["admin", superAdminHash, "مدير الموقع"]
             );
-            console.log("Super admin created - username: admin, password: admin123");
+            console.log("Super admin seed created (username: admin). Use SUPER_ADMIN_INITIAL_PASSWORD on production hosts.");
         } catch (e) {
             // Already exists
         }
@@ -185,7 +239,7 @@ app.post("/api/auth/register", authenticateSuperAdmin, async (req, res) => {
             return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
         }
 
-        const passwordHash = hashPassword(password);
+        const passwordHash = await bcrypt.hash(password, 12);
 
         const [result] = await pool.query(
             "INSERT INTO admins (username, password_hash, full_name, phone, role) VALUES (?, ?, ?, ?, 'manager')",
@@ -205,8 +259,8 @@ app.post("/api/auth/register", authenticateSuperAdmin, async (req, res) => {
     }
 });
 
-// Login (unified - sets HTTP-only cookie)
-app.post("/api/auth/login", async (req, res) => {
+// Login (unified)
+app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -214,11 +268,9 @@ app.post("/api/auth/login", async (req, res) => {
             return res.status(400).json({ error: "اسم المستخدم وكلمة المرور مطلوبان" });
         }
 
-        const passwordHash = hashPassword(password);
-
         const [rows] = await pool.query(
-            "SELECT id, username, full_name, role FROM admins WHERE username = ? AND password_hash = ?",
-            [username, passwordHash]
+            "SELECT id, username, full_name, role, password_hash FROM admins WHERE username = ?",
+            [username]
         );
 
         if (rows.length === 0) {
@@ -226,8 +278,13 @@ app.post("/api/auth/login", async (req, res) => {
         }
 
         const admin = rows[0];
+        const valid = await verifyPasswordWithMigration(password, admin.password_hash, admin.id);
+        if (!valid) {
+            return res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+        }
+
         const token = generateToken();
-        sessions.set(token, { id: admin.id, role: admin.role });
+        sessions.set(token, { id: admin.id, role: admin.role, expiresAt: Date.now() + SESSION_TTL_MS });
 
         res.json({
             message: "تم تسجيل الدخول بنجاح",
@@ -247,6 +304,10 @@ app.get("/api/auth/me", (req, res) => {
         return res.status(401).json({ error: "غير مسجل الدخول" });
     }
     const session = sessions.get(token);
+    if (session.expiresAt == null || session.expiresAt < Date.now()) {
+        sessions.delete(token);
+        return res.status(401).json({ error: "انتهت الجلسة - يرجى تسجيل الدخول من جديد" });
+    }
     pool.query("SELECT id, username, full_name, role FROM admins WHERE id = ?", [session.id])
         .then(([rows]) => {
             if (rows.length === 0) {
@@ -430,6 +491,21 @@ app.put("/api/admin/stations/:id", authenticateAdmin, async (req, res) => {
         const stationId = req.params.id;
         const { name, city, address, latitude, longitude, fuel_type } = req.body;
 
+        if (!name || !city || latitude == null || longitude == null) {
+            return res.status(400).json({ error: "الاسم والمدينة والموقع مطلوبين" });
+        }
+
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        if (isNaN(lat) || isNaN(lng) || lat < 19 || lat > 34 || lng < 9 || lng > 26) {
+            return res.status(400).json({ error: "الموقع الجغرافي غير صحيح - يجب أن يكون داخل ليبيا" });
+        }
+
+        const ft = fuel_type || "benzine";
+        if (!["benzine", "diesel", "both"].includes(ft)) {
+            return res.status(400).json({ error: "نوع الوقود غير صحيح" });
+        }
+
         // Verify ownership
         const [station] = await pool.query(
             "SELECT id FROM stations WHERE id = ? AND admin_id = ?",
@@ -443,7 +519,7 @@ app.put("/api/admin/stations/:id", authenticateAdmin, async (req, res) => {
         await pool.query(
             `UPDATE stations SET name = ?, city = ?, address = ?, latitude = ?, longitude = ?, fuel_type = ?
              WHERE id = ? AND admin_id = ?`,
-            [name, city, address, latitude, longitude, fuel_type, stationId, req.adminId]
+            [name, city, address || null, lat, lng, ft, stationId, req.adminId]
         );
 
         res.json({ message: "تم تحديث بيانات المحطة بنجاح" });

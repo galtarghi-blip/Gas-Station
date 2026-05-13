@@ -158,11 +158,11 @@ function renderStationCards(containerId) {
     grid.innerHTML = myStations.map(s => `
         <div class="admin-station-card">
             <div class="admin-station-card-header">
-                <h4>${s.name}</h4>
+                <h4>${escapeHtml(s.name)}</h4>
                 <span class="status-badge ${s.is_active ? "active" : "inactive"}">${s.is_active ? "نشطة" : "متوقفة"}</span>
             </div>
             <div class="station-details">
-                <div class="station-detail"><span class="icon">📍</span> ${s.city}${s.address ? " - " + s.address : ""}</div>
+                <div class="station-detail"><span class="icon">📍</span> ${escapeHtml(s.city)}${s.address ? " - " + escapeHtml(s.address) : ""}</div>
                 <div class="station-detail"><span class="icon">🕐</span> ${timeAgo(s.last_status_update)}</div>
             </div>
             <div class="form-group" style="margin:12px 0 16px;">
