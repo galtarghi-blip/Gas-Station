@@ -217,6 +217,128 @@ body {
     color: var(--accent);
 }
 
+.pwa-install-btn {
+    white-space: nowrap;
+}
+
+.pwa-install-btn-icon {
+    font-size: 1.05em;
+}
+
+@media (max-width: 400px) {
+    .pwa-install-btn-text {
+        display: none;
+    }
+
+    .pwa-install-btn {
+        padding: 6px 10px;
+        min-width: 40px;
+        justify-content: center;
+    }
+}
+
+.pwa-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.pwa-modal[hidden] {
+    display: none !important;
+}
+
+.pwa-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+}
+
+.pwa-modal-dialog {
+    position: relative;
+    max-width: 420px;
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 20px 18px;
+    box-shadow: var(--shadow);
+    animation: pwa-modal-in 0.22s ease-out;
+}
+
+@keyframes pwa-modal-in {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.pwa-modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0 0 14px;
+    color: var(--text-primary);
+}
+
+.pwa-modal-close {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pwa-modal-close:hover {
+    color: var(--accent);
+    background: var(--bg-secondary);
+}
+
+.pwa-modal-body {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.pwa-modal-body .pwa-steps {
+    margin: 0 0 12px;
+    padding-inline-start: 22px;
+}
+
+.pwa-modal-body .pwa-steps li {
+    margin-bottom: 8px;
+}
+
+.pwa-modal-body .pwa-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.pwa-modal-ok {
+    width: 100%;
+    justify-content: center;
+}
+
 /* Map */
 #map {
     position: fixed;

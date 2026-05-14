@@ -144,6 +144,127 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.remove(), 3000);
 }
 
+function isPwaStandalone() {
+    return (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: window-controls-overlay)").matches ||
+        (typeof navigator.standalone === "boolean" && navigator.standalone)
+    );
+}
+
+function isSecureForPwa() {
+    return (
+        window.isSecureContext === true ||
+        location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1"
+    );
+}
+
+function isIOSDevice() {
+    const ua = navigator.userAgent || "";
+    if (/iPad|iPhone|iPod/.test(ua)) return true;
+    return /MacIntel/.test(navigator.platform || "") && navigator.maxTouchPoints > 1;
+}
+
+let deferredInstallPrompt = null;
+
+function syncInstallPwaButton() {
+    const btn = document.getElementById("installPwaBtn");
+    if (!btn) return;
+    if (isPwaStandalone()) {
+        btn.hidden = true;
+        return;
+    }
+    if (!isSecureForPwa()) {
+        btn.hidden = true;
+        return;
+    }
+    const mobile = window.matchMedia("(max-width: 768px)").matches;
+    const show = deferredInstallPrompt !== null || isIOSDevice() || mobile;
+    btn.hidden = !show;
+}
+
+function closePwaInstallModal() {
+    const modal = document.getElementById("pwaInstallModal");
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function openPwaInstallModal(kind) {
+    const body = document.getElementById("pwaInstallModalBody");
+    const modal = document.getElementById("pwaInstallModal");
+    if (!body || !modal) return;
+    if (kind === "ios") {
+        body.innerHTML =
+            "<ol class=\"pwa-steps\"><li>اضغط زر <strong>المشاركة</strong> في شريط أدوات Safari (المربع مع السهم لأعلى).</li><li>مرّر للأسفل واختر <strong>إضافة إلى الشاشة الرئيسية</strong>.</li><li>اضغط <strong>إضافة</strong> في الزاوية.</li></ol>" +
+            "<p class=\"pwa-note\">في iPhone وiPad لا يظهر مربع تثبيت تلقائي؛ التثبيت يدوي من Safari. إن كنت تستخدم Chrome جرّب فتح الرابط في Safari ثم كرر الخطوات.</p>";
+    } else {
+        body.innerHTML =
+            "<ol class=\"pwa-steps\"><li>افتح قائمة المتصفح (⋮ أو ⋯ أو القائمة في الأسفل).</li><li>ابحث عن <strong>تثبيت التطبيق</strong> أو <strong>Install app</strong> أو <strong>Add to Home screen</strong>.</li><li>أكّد التثبيت إن ظهر لك مربع حوار.</li></ol>" +
+            "<p class=\"pwa-note\">إن ظهر لك مباشرةً طلب تثبيت من المتصفح، استخدمه قبل هذه الخطوات.</p>";
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function initPwaInstall() {
+    const btn = document.getElementById("installPwaBtn");
+    const modal = document.getElementById("pwaInstallModal");
+    if (!btn || !modal) return;
+
+    if (isPwaStandalone()) {
+        btn.hidden = true;
+        return;
+    }
+
+    window.addEventListener("beforeinstallprompt", e => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        syncInstallPwaButton();
+    });
+
+    window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        btn.hidden = true;
+        showToast("تم تثبيت التطبيق");
+    });
+
+    btn.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+            try {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+                if (outcome === "accepted") {
+                    showToast("تم بدء التثبيت");
+                    btn.hidden = true;
+                } else {
+                    syncInstallPwaButton();
+                }
+            } catch {
+                deferredInstallPrompt = null;
+                syncInstallPwaButton();
+            }
+            return;
+        }
+        openPwaInstallModal(isIOSDevice() ? "ios" : "generic");
+    });
+
+    document.getElementById("pwaInstallModalClose")?.addEventListener("click", closePwaInstallModal);
+    document.getElementById("pwaInstallModalBackdrop")?.addEventListener("click", closePwaInstallModal);
+    document.getElementById("pwaInstallModalOk")?.addEventListener("click", closePwaInstallModal);
+
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && !modal.hidden) closePwaInstallModal();
+    });
+
+    window.matchMedia("(max-width: 768px)").addEventListener("change", syncInstallPwaButton);
+
+    syncInstallPwaButton();
+    setTimeout(syncInstallPwaButton, 2500);
+}
+
 // Initialize Leaflet map centered on Libya
 function initMap() {
     if (typeof L !== "undefined" && L.Icon && L.Icon.Default) {
@@ -375,6 +496,7 @@ function setupEvents() {
 
 // Init
 document.addEventListener("DOMContentLoaded", () => {
+    initPwaInstall();
     initMap();
     setupEvents();
     initMobileBottomSheet();

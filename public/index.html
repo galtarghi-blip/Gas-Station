@@ -45,8 +45,13 @@
         </div>
 
         <div class="header-actions">
+            <button type="button" class="btn btn-outline btn-sm pwa-install-btn" id="installPwaBtn" hidden
+                aria-label="تثبيت التطبيق على الجهاز">
+                <span class="pwa-install-btn-icon" aria-hidden="true">📲</span>
+                <span class="pwa-install-btn-text">تثبيت</span>
+            </button>
             <a href="admin.html" class="btn btn-outline btn-sm">لوحة التحكم</a>
-            <button class="btn-icon" id="locateBtn" title="موقعي">📍</button>
+            <button type="button" class="btn-icon" id="locateBtn" title="موقعي">📍</button>
         </div>
     </header>
 
@@ -102,6 +107,17 @@
         <span class="sheet-quick-search-icon" aria-hidden="true">🔍</span>
         <span>بحث وتصفية</span>
     </button>
+
+    <!-- PWA install help (iOS / متصفحات بدون prompt) -->
+    <div id="pwaInstallModal" class="pwa-modal" hidden aria-hidden="true">
+        <div class="pwa-modal-backdrop" id="pwaInstallModalBackdrop" tabindex="-1"></div>
+        <div class="pwa-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pwaModalTitle">
+            <button type="button" class="pwa-modal-close" id="pwaInstallModalClose" aria-label="إغلاق">×</button>
+            <h3 id="pwaModalTitle" class="pwa-modal-title">تثبيت التطبيق</h3>
+            <div id="pwaInstallModalBody" class="pwa-modal-body"></div>
+            <button type="button" class="btn btn-primary btn-sm pwa-modal-ok" id="pwaInstallModalOk">حسناً</button>
+        </div>
+    </div>
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
