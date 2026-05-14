@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="اعرف أي محطة وقود شغالة ومتوفر فيها بنزين في ليبيا - خريطة مباشرة لمحطات الوقود">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#1d4ed8">
     <title> خريطة محطات الوقود في ليبيا</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +18,7 @@
         <link rel="stylesheet"
             href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&amp;display=swap">
     </noscript>
+    <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png" sizes="192x192">
 </head>
@@ -26,7 +27,9 @@
     <!-- Header -->
     <header class="hero-header" id="mainHeader">
         <div class="logo-section">
-            <div class="logo-icon">⛽</div>
+            <div class="logo-icon logo-icon--brand" aria-hidden="true">
+                <img src="icon-192.png" alt="" width="44" height="44" loading="eager" decoding="async">
+            </div>
             <div class="logo-text">
                 <h1>وين نلقى بنزينة</h1>
                 <span>محطات الوقود في ليبيا</span>
@@ -47,7 +50,7 @@
         <div class="header-actions">
             <button type="button" class="btn btn-outline btn-sm pwa-install-btn" id="installPwaBtn" hidden
                 aria-label="تثبيت التطبيق على الجهاز">
-                <span class="pwa-install-btn-icon" aria-hidden="true">📲</span>
+                <span class="pwa-install-btn-icon" aria-hidden="true">📲حمل الأن</span>
                 <span class="pwa-install-btn-text">تثبيت</span>
             </button>
             <a href="admin.html" class="btn btn-outline btn-sm">لوحة التحكم</a>
