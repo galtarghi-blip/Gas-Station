@@ -1,5 +1,8 @@
 // Admin Dashboard JavaScript
-const API = "https://gas-station-kq3v.onrender.com";
+const API =
+    typeof location !== "undefined" && location.origin && location.protocol.startsWith("http")
+        ? location.origin
+        : "https://gas-station-kq3v.onrender.com";
 
 // Session token stored in sessionStorage (clears when browser closes)
 let token = sessionStorage.getItem("admin_token") || null;
@@ -212,6 +215,15 @@ function initPickMap() {
     const el = document.getElementById("pickMap");
     if (!el || el.offsetHeight === 0) return;
     if (pickMap) { pickMap.invalidateSize(); return; }
+
+    if (typeof L !== "undefined" && L.Icon && L.Icon.Default) {
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: "vendor/images/marker-icon-2x.png",
+            iconUrl: "vendor/images/marker-icon.png",
+            shadowUrl: "vendor/images/marker-shadow.png"
+        });
+    }
 
     pickMap = L.map("pickMap").setView([32.9, 13.18], 6);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {

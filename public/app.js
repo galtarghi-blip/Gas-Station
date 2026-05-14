@@ -1,5 +1,8 @@
 // Map page JavaScript - Citizens view
-const API_BASE = "https://gas-station-kq3v.onrender.com";
+const API_BASE =
+    typeof location !== "undefined" && location.origin && location.protocol.startsWith("http")
+        ? location.origin
+        : "https://gas-station-kq3v.onrender.com";
 
 // State
 let map;
@@ -143,6 +146,14 @@ function showToast(message, type = "success") {
 
 // Initialize Leaflet map centered on Libya
 function initMap() {
+    if (typeof L !== "undefined" && L.Icon && L.Icon.Default) {
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: "vendor/images/marker-icon-2x.png",
+            iconUrl: "vendor/images/marker-icon.png",
+            shadowUrl: "vendor/images/marker-shadow.png"
+        });
+    }
     map = L.map("map", {
         center: [26.3351, 17.2283],
         zoom: 6,
@@ -298,6 +309,16 @@ function filterStations() {
     renderMarkers(filtered);
 }
 
+function debounce(fn, wait) {
+    let t;
+    return function debounced() {
+        clearTimeout(t);
+        t = setTimeout(fn, wait);
+    };
+}
+
+const debouncedFilterStations = debounce(() => filterStations(), 150);
+
 // Fetch stations from API
 async function fetchStations() {
     try {
@@ -320,7 +341,7 @@ async function fetchStations() {
 // Event listeners
 function setupEvents() {
     // Search
-    document.getElementById("searchInput").addEventListener("input", filterStations);
+    document.getElementById("searchInput").addEventListener("input", debouncedFilterStations);
 
     // Filter chips
     document.querySelectorAll(".chip").forEach(chip => {

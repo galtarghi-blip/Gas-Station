@@ -1,3 +1,4 @@
+const compression = require("compression");
 const express = require("express");
 const path = require("path");
 const mysql = require("mysql2/promise");
@@ -12,6 +13,7 @@ app.set("trust proxy", 1);
 
 const DEFAULT_ALLOWED_ORIGINS = [
     "https://gas-station-kq3v.onrender.com",
+    "https://gas-station-bq3s.onrender.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5500",
@@ -46,9 +48,22 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
     message: { error: "محاولات كثيرة، حاول لاحقاً" }
 });
+app.use(compression({ threshold: 1024 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(
+    express.static(path.join(__dirname, "../public"), {
+        etag: true,
+        lastModified: true,
+        setHeaders(res, filePath) {
+            if (filePath.endsWith(".html")) {
+                res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+            } else if (/\.(js|mjs|css|png|jpe?g|gif|webp|ico|json|svg|woff2?|map)$/i.test(filePath)) {
+                res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+            }
+        }
+    })
+);
 
 // MySQL Connection Pool
 // const pool = mysql.createPool({

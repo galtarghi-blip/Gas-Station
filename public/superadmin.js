@@ -1,5 +1,8 @@
 // Super Admin Dashboard JavaScript
-const API = "https://gas-station-kq3v.onrender.com";
+const API =
+    typeof location !== "undefined" && location.origin && location.protocol.startsWith("http")
+        ? location.origin
+        : "https://gas-station-kq3v.onrender.com";
 
 let token = sessionStorage.getItem("admin_token") || null;
 let superInfo = null;
