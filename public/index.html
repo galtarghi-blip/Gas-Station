@@ -8,6 +8,7 @@
     <title> خريطة محطات الوقود في ليبيا</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="manifest" href="manifest.json">
 </head>
 
 <body>
@@ -97,6 +98,15 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="escape.js"></script>
     <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+              .then(reg => console.log('PWA Ready!'))
+              .catch(err => console.log('PWA Error', err));
+          });
+        }
+      </script>
 </body>
 
 </html>
