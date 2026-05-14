@@ -5,10 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="اعرف أي محطة وقود شغالة ومتوفر فيها بنزين في ليبيا - خريطة مباشرة لمحطات الوقود">
+    <meta name="theme-color" content="#0f172a">
     <title> خريطة محطات الوقود في ليبيا</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png" sizes="192x192">
 </head>
 
 <body>
@@ -99,14 +101,26 @@
     <script src="escape.js"></script>
     <script src="app.js"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-              .then(reg => console.log('PWA Ready!'))
-              .catch(err => console.log('PWA Error', err));
-          });
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker
+                    .register("sw.js", { scope: "./" })
+                    .then(reg => {
+                        reg.addEventListener("updatefound", () => {
+                            const installing = reg.installing;
+                            if (installing) {
+                                installing.addEventListener("statechange", () => {
+                                    if (installing.state === "installed" && navigator.serviceWorker.controller) {
+                                        /* يتوفر تحديث جديد للـ SW */
+                                    }
+                                });
+                            }
+                        });
+                    })
+                    .catch(() => { /* فشل التسجيل لا يمنع عمل الصفحة */ });
+            });
         }
-      </script>
+    </script>
 </body>
 
 </html>

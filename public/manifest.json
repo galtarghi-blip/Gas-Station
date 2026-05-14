@@ -1,25 +1,28 @@
 {
-    "short_name": "GasStation",
-    "name": "GasStation Management System",
+    "id": "/",
+    "lang": "ar",
+    "dir": "rtl",
+    "short_name": "وين بنزينة",
+    "name": "وين نلقى بنزينة — محطات الوقود في ليبيا",
+    "description": "خريطة مباشرة لحالة محطات الوقود في ليبيا",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "theme_color": "#0f172a",
+    "background_color": "#0f172a",
     "icons": [
         {
-            "src":"favicon.ico",
-            "sizes":"192x192",
-            "type":"image/x-icon"
+            "src": "./icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
         },
         {
-            "src":"favicon.ico",
-            "sizes":"64x64 32x32 24x24 16x16",
-            "type":"image/x-icon"
+            "src": "./icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
         }
-    
-    ],
-
-    "start_url": "./index.html",
-    "display": "standalone",
-    "theme_color": "#000000",
-    "background_color": "#ffffff"
-
-
-
+    ]
 }
