@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Fuel map app icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0e1a"/>
+      <stop offset="55%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#152042"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#00b894"/>
+      <stop offset="100%" stop-color="#00d4aa"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Safe padding for Android maskable icons -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="10" y="10" width="492" height="492" rx="102" fill="none" stroke="url(#accent)" stroke-opacity="0.35" stroke-width="3"/>
+  <g transform="translate(256,262)">
+    <rect x="-78" y="72" width="156" height="18" rx="6" fill="#1e293b"/>
+    <rect x="-74" y="74" width="148" height="12" rx="4" fill="#334155"/>
+    <rect x="-52" y="-108" width="104" height="178" rx="16" fill="#f1f5f9"/>
+    <rect x="-46" y="-102" width="92" height="120" rx="10" fill="url(#shine)"/>
+    <rect x="-34" y="-88" width="68" height="40" rx="8" fill="url(#accent)" filter="url(#glow)"/>
+    <rect x="-28" y="-82" width="56" height="10" rx="3" fill="#0a0e1a" fill-opacity="0.35"/>
+    <path d="M 44 -20 Q 88 -8 88 38 Q 88 62 52 72 L 52 58 Q 74 52 74 32 Q 74 4 44 -6 Z" fill="#00d4aa"/>
+    <rect x="38" y="-42" width="22" height="52" rx="6" fill="#e2e8f0"/>
+    <rect x="42" y="-38" width="14" height="20" rx="3" fill="#94a3b8"/>
+    <path d="M 52 -42 L 52 -108" stroke="#cbd5e1" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="52" cy="-108" r="8" fill="#64748b"/>
+  </g>
+</svg>
