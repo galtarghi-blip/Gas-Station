@@ -953,6 +953,15 @@ body {
     border-radius: 18px;
 }
 
+.auth-logo .logo-icon--brand {
+    background: transparent;
+    box-shadow: 0 2px 14px rgba(29, 78, 216, 0.28);
+}
+
+.auth-logo .logo-icon--brand img {
+    border-radius: 18px;
+}
+
 .auth-logo h2 {
     font-size: 22px;
     font-weight: 900;

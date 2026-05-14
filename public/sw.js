@@ -1,4 +1,4 @@
-const CACHE_NAME = "gas-station-cache-v4";
+const CACHE_NAME = "gas-station-cache-v6";
 
 const urlsToCache = [
     "./",
@@ -9,6 +9,7 @@ const urlsToCache = [
     "./vendor/leaflet.js",
     "./escape.js",
     "./app.js",
+    "./site-logo.png",
     "./icon-192.png",
     "./icon-512.png"
 ];
