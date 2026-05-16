@@ -6,6 +6,17 @@ let markers = [];
 let allStations = [];
 let currentFilter = "all";
 
+// Route navigation
+const OSRM_ROUTE_URL = "https://router.project-osrm.org/route/v1/driving";
+let routeOutlineLayer = null;
+let routeLayer = null;
+let userLocationMarker = null;
+let userAccuracyCircle = null;
+let geoWatchId = null;
+let navigationState = null;
+let navFollowEnabled = true;
+let navNearNotified = false;
+
 const SHEET_MQ = "(max-width: 768px)";
 
 function isMobileSheetLayout() {
@@ -328,11 +339,474 @@ function timeAgo(dateStr) {
     return `منذ ${days} يوم`;
 }
 
+// ===== ROUTE NAVIGATION =====
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = d => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatNavDistance(meters) {
+    if (meters < 1000) return `${Math.round(meters)} م`;
+    return `${(meters / 1000).toFixed(1)} كم`;
+}
+
+function formatNavDuration(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    if (s < 60) return "أقل من دقيقة";
+    const mins = Math.round(s / 60);
+    if (mins < 60) return `${mins} دقيقة`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m ? `${h} س ${m} د` : `${h} ساعة`;
+}
+
+function getStationById(id) {
+    const num = Number(id);
+    return allStations.find(s => Number(s.id) === num);
+}
+
+function createUserLocationIcon() {
+    return L.divIcon({
+        className: "user-location-marker",
+        html: '<div class="user-location-dot"><span class="user-location-pulse"></span></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+}
+
+function setNavBarLoading(loading) {
+    const bar = document.getElementById("navBar");
+    const inner = bar?.querySelector(".nav-bar-inner");
+    const loadEl = document.getElementById("navBarLoading");
+    if (!bar) return;
+    if (loading) {
+        bar.hidden = false;
+        bar.classList.add("nav-bar--loading");
+        if (inner) inner.hidden = true;
+        if (loadEl) loadEl.hidden = false;
+    } else {
+        bar.classList.remove("nav-bar--loading");
+        if (inner) inner.hidden = false;
+        if (loadEl) loadEl.hidden = true;
+    }
+}
+
+function showNavBar(station) {
+    const bar = document.getElementById("navBar");
+    if (!bar) return;
+    document.getElementById("navDestName").textContent = station.name;
+    bar.hidden = false;
+    document.body.classList.add("nav-active");
+}
+
+function hideNavBar() {
+    const bar = document.getElementById("navBar");
+    if (bar) bar.hidden = true;
+    document.body.classList.remove("nav-active");
+}
+
+function clearRouteLayers() {
+    if (routeOutlineLayer) {
+        map.removeLayer(routeOutlineLayer);
+        routeOutlineLayer = null;
+    }
+    if (routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+    }
+}
+
+function clearUserLocationLayers() {
+    if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+        userLocationMarker = null;
+    }
+    if (userAccuracyCircle) {
+        map.removeLayer(userAccuracyCircle);
+        userAccuracyCircle = null;
+    }
+}
+
+function drawRoute(coordsLatLng) {
+    clearRouteLayers();
+    routeOutlineLayer = L.polyline(coordsLatLng, {
+        color: "#0f766e",
+        weight: 9,
+        opacity: 0.35,
+        lineCap: "round",
+        lineJoin: "round"
+    }).addTo(map);
+    routeLayer = L.polyline(coordsLatLng, {
+        color: "#00d4aa",
+        weight: 5,
+        opacity: 0.92,
+        lineCap: "round",
+        lineJoin: "round"
+    }).addTo(map);
+}
+///sdsdas
+function buildFallbackRoute(fromLat, fromLng, toLat, toLng) {
+    const distanceM = haversineMeters(fromLat, fromLng, toLat, toLng);
+    return {
+        coords: [[fromLat, fromLng], [toLat, toLng]],
+        distanceM,
+        durationS: distanceM / 13.89,
+        isFallback: true
+    };
+}
+
+async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
+    const params = new URLSearchParams({
+        from: `${fromLat},${fromLng}`,
+        to: `${toLat},${toLng}`
+    });
+
+    let data = null;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/route?${params}`);
+        if (res.ok) data = await res.json();
+    } catch (e) {
+        console.warn("Route via API_BASE failed:", e);
+    }
+
+    if (!data) {
+        const url = `${OSRM_ROUTE_URL}/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("تعذر حساب المسار");
+        data = await res.json();
+    }
+
+    if (data.code === "Ok" && data.routes?.[0]) {
+        const route = data.routes[0];
+        return {
+            coords: route.geometry.coordinates.map(c => [c[1], c[0]]),
+            distanceM: route.distance,
+            durationS: route.duration,
+            isFallback: false
+        };
+    }
+
+    return buildFallbackRoute(fromLat, fromLng, toLat, toLng);
+}
+
+function updateUserLocation(lat, lng, accuracy) {
+    const latlng = [lat, lng];
+    if (!userLocationMarker) {
+        userLocationMarker = L.marker(latlng, {
+            icon: createUserLocationIcon(),
+            zIndexOffset: 1000
+        }).addTo(map);
+    } else {
+        userLocationMarker.setLatLng(latlng);
+    }
+
+    if (accuracy && accuracy > 0) {
+        if (!userAccuracyCircle) {
+            userAccuracyCircle = L.circle(latlng, {
+                radius: accuracy,
+                color: "#3b82f6",
+                fillColor: "#3b82f6",
+                fillOpacity: 0.12,
+                weight: 1
+            }).addTo(map);
+        } else {
+            userAccuracyCircle.setLatLng(latlng);
+            userAccuracyCircle.setRadius(accuracy);
+        }
+    }
+}
+
+function fitRouteOnMap(coords, userLat, userLng) {
+    const bounds = L.latLngBounds(coords);
+    bounds.extend([userLat, userLng]);
+    const dest = navigationState?.station;
+    if (dest) bounds.extend([dest.latitude, dest.longitude]);
+    map.fitBounds(bounds, { padding: [72, 72], maxZoom: 16 });
+}
+
+function updateNavigationProgress(lat, lng) {
+    if (!navigationState) return;
+    const dest = navigationState.station;
+    const destLat = parseFloat(dest.latitude);
+    const destLng = parseFloat(dest.longitude);
+    const remainingM = haversineMeters(lat, lng, destLat, destLng);
+    const ratio = navigationState.totalDistanceM > 0
+        ? Math.min(1, remainingM / navigationState.totalDistanceM)
+        : 1;
+    const etaSec = navigationState.totalDurationS * ratio;
+
+    const distEl = document.getElementById("navDistance");
+    const etaEl = document.getElementById("navEta");
+    const progressEl = document.getElementById("navProgressFill");
+    if (distEl) distEl.textContent = formatNavDistance(remainingM);
+    if (etaEl) etaEl.textContent = formatNavDuration(etaSec);
+    if (progressEl) {
+        const pct = Math.max(0, Math.min(100, (1 - ratio) * 100));
+        progressEl.style.width = `${pct}%`;
+    }
+
+    if (remainingM < 80 && !navNearNotified) {
+        navNearNotified = true;
+        showToast("أنت قريب من المحطة", "success");
+    }
+
+    if (navFollowEnabled) {
+        map.panTo([lat, lng], { animate: true, duration: 0.45 });
+    }
+}
+
+function stopGeoWatch() {
+    if (geoWatchId != null) {
+        navigator.geolocation.clearWatch(geoWatchId);
+        geoWatchId = null;
+    }
+}
+
+function stopNavigation() {
+    stopGeoWatch();
+    clearRouteLayers();
+    clearUserLocationLayers();
+    navigationState = null;
+    navFollowEnabled = true;
+    navNearNotified = false;
+    hideNavBar();
+}
+
+function openStationInMaps(station) {
+    const lat = parseFloat(station.latitude);
+    const lng = parseFloat(station.longitude);
+    const coords = `${lat},${lng}`;
+    const ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+        window.open(`maps://?daddr=${coords}&dirflg=d`, "_blank");
+    } else {
+        window.open(
+            `https://www.google.com/maps/dir/?api=1&destination=${coords}&travelmode=driving`,
+            "_blank",
+            "noopener"
+        );
+    }
+}
+
+function getCurrentPositionOnce() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("المتصفح لا يدعم تحديد الموقع"));
+            return;
+        }
+
+        const tryOnce = opts =>
+            new Promise((res, rej) => {
+                navigator.geolocation.getCurrentPosition(res, rej, opts);
+            });
+
+        (async () => {
+            try {
+                resolve(
+                    await tryOnce({
+                        enableHighAccuracy: true,
+                        timeout: 14000,
+                        maximumAge: 0
+                    })
+                );
+            } catch {
+                resolve(
+                    await tryOnce({
+                        enableHighAccuracy: false,
+                        timeout: 20000,
+                        maximumAge: 120000
+                    })
+                );
+            }
+        })().catch(reject);
+    });
+}
+
+function startGeoWatch() {
+    stopGeoWatch();
+    geoWatchId = navigator.geolocation.watchPosition(
+        pos => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            updateUserLocation(latitude, longitude, accuracy);
+            updateNavigationProgress(latitude, longitude);
+        },
+        err => {
+            const msg =
+                err.code === 1
+                    ? "تم إيقاف تتبع الموقع — اسمح بالوصول للموقع"
+                    : "فقدنا إشارة موقعك";
+            showToast(msg, "error");
+        },
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 12000 }
+    );
+}
+
+async function startStationNavigation(stationId) {
+    const station = typeof stationId === "object" ? stationId : getStationById(stationId);
+    if (!station) {
+        showToast("المحطة غير متوفرة", "error");
+        return;
+    }
+
+    if (Number(navigationState?.stationId) === Number(station.id)) {
+        navFollowEnabled = true;
+        const m = userLocationMarker;
+        if (m) map.flyTo(m.getLatLng(), 16, { duration: 0.8 });
+        return;
+    }
+
+    if (navigationState) stopNavigation();
+
+    if (!navigator.geolocation) {
+        showToast("تحديد الموقع غير مدعوم في متصفحك", "error");
+        return;
+    }
+
+    if (isMobileSheetLayout()) setSheetState("collapsed");
+
+    showNavBar(station);
+    setNavBarLoading(true);
+    navNearNotified = false;
+    navFollowEnabled = true;
+
+    try {
+        const pos = await getCurrentPositionOnce();
+        const userLat = pos.coords.latitude;
+        const userLng = pos.coords.longitude;
+        updateUserLocation(userLat, userLng, pos.coords.accuracy);
+
+        const route = await fetchDrivingRoute(
+            userLat,
+            userLng,
+            parseFloat(station.latitude),
+            parseFloat(station.longitude)
+        );
+
+        drawRoute(route.coords);
+        navigationState = {
+            stationId: station.id,
+            station,
+            routeCoords: route.coords,
+            totalDistanceM: route.distanceM,
+            totalDurationS: route.durationS
+        };
+
+        document.getElementById("navDistance").textContent = formatNavDistance(route.distanceM);
+        document.getElementById("navEta").textContent = formatNavDuration(route.durationS);
+        document.getElementById("navProgressFill").style.width = "0%";
+
+        fitRouteOnMap(route.coords, userLat, userLng);
+        startGeoWatch();
+        setNavBarLoading(false);
+
+        const marker = markers.find(m => m.stationId === station.id);
+        if (marker) {
+            marker.setPopupContent(buildPopup(station));
+            marker.openPopup();
+            bindPopupActions();
+        }
+
+        showToast(
+            route.isFallback
+                ? "مسار تقريبي (خط مستقيم) — قد يختلف عن الطريق الفعلي"
+                : "تم بدء تتبع المسار"
+        );
+    } catch (err) {
+        console.error("Navigation error:", err);
+        stopNavigation();
+        const msg =
+            err && err.code === 1
+                ? "يجب السماح بالوصول إلى موقعك لتتبع المسار"
+                : (err?.message || "تعذر بدء التتبع");
+        showToast(msg, "error");
+    }
+}
+
+function bindPopupActions() {
+    const popupEl = document.querySelector(".leaflet-popup");
+    if (popupEl && typeof L !== "undefined") {
+        L.DomEvent.disableClickPropagation(popupEl);
+        L.DomEvent.disableScrollPropagation(popupEl);
+    }
+}
+
+function markerRefreshPopup(station) {
+    const marker = markers.find(m => m.stationId === station.id);
+    if (marker) {
+        marker.setPopupContent(buildPopup(station));
+        bindPopupActions();
+    }
+}
+
+function initNavigation() {
+    document.body.addEventListener(
+        "click",
+        e => {
+            const navBtn = e.target.closest(".popup-nav-btn");
+            if (!navBtn || !navBtn.closest(".leaflet-popup")) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const station = getStationById(navBtn.dataset.stationId);
+            if (!station) return;
+            if (Number(navigationState?.stationId) === Number(station.id)) {
+                stopNavigation();
+                showToast("تم إيقاف التتبع");
+                markerRefreshPopup(station);
+            } else {
+                startStationNavigation(station.id);
+            }
+        },
+        true
+    );
+
+    document.body.addEventListener(
+        "click",
+        e => {
+            const extBtn = e.target.closest(".popup-external-btn");
+            if (!extBtn || !extBtn.closest(".leaflet-popup")) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const station = getStationById(extBtn.dataset.stationId);
+            if (station) openStationInMaps(station);
+        },
+        true
+    );
+
+    document.getElementById("navStopBtn")?.addEventListener("click", () => {
+        stopNavigation();
+        showToast("تم إيقاف التتبع");
+        filterStations();
+    });
+
+    document.getElementById("navRecenterBtn")?.addEventListener("click", () => {
+        if (!userLocationMarker) {
+            showToast("لم يُحدد موقعك بعد", "error");
+            return;
+        }
+        navFollowEnabled = true;
+        map.flyTo(userLocationMarker.getLatLng(), 16, { duration: 0.8 });
+    });
+
+    document.getElementById("navExternalBtn")?.addEventListener("click", () => {
+        if (navigationState?.station) openStationInMaps(navigationState.station);
+    });
+}
+
 // Build popup content
 function buildPopup(station) {
     const statusClass = station.is_active ? "active" : "inactive";
     const statusText = station.is_active ? "متوفر الآن" : "غير متوفر";
     const addr = station.address ? " - " + escapeHtml(station.address) : "";
+    const isNavTarget =
+        navigationState && Number(navigationState.stationId) === Number(station.id);
     return `
         <div class="popup-content">
             <h4>${escapeHtml(station.name)}</h4>
@@ -341,6 +815,14 @@ function buildPopup(station) {
             <p>👤 ${escapeHtml(station.manager_name)}</p>
             <p>🕐 آخر تحديث: ${timeAgo(station.last_status_update)}</p>
             <span class="popup-status ${statusClass}">${statusText}</span>
+            <div class="popup-actions">
+                <button type="button" class="popup-btn popup-btn-primary popup-nav-btn" data-station-id="${station.id}">
+                    ${isNavTarget ? "● جاري التتبع" : "🧭 تتبع المسار"}
+                </button>
+                <button type="button" class="popup-btn popup-btn-secondary popup-external-btn" data-station-id="${station.id}">
+                    فتح في الخرائط
+                </button>
+            </div>
         </div>
     `;
 }
@@ -355,9 +837,17 @@ function renderMarkers(stations) {
         const icon = createMarkerIcon(station.is_active, station.fuel_type);
         const marker = L.marker([station.latitude, station.longitude], { icon })
             .addTo(map)
-            .bindPopup(buildPopup(station), { maxWidth: 280 });
+            .bindPopup(buildPopup(station), { maxWidth: 300, className: "station-popup" });
 
         marker.stationId = station.id;
+        marker.on("popupopen", ev => {
+            const el = ev.popup?.getElement?.();
+            if (el && typeof L !== "undefined") {
+                L.DomEvent.disableClickPropagation(el);
+                L.DomEvent.disableScrollPropagation(el);
+            }
+            bindPopupActions();
+        });
         markers.push(marker);
     });
 }
@@ -383,20 +873,25 @@ function renderStationList(stations) {
                 <p style="font-size:10px;color:var(--text-muted);">${timeAgo(s.last_status_update)}</p>
             </div>
             <span class="fuel-badge ${s.fuel_type}">${fuelLabel(s.fuel_type)}</span>
+            <button type="button" class="station-nav-btn" data-id="${s.id}" title="تتبع المسار" aria-label="تتبع المسار إلى ${escapeHtml(s.name)}">🧭</button>
         </div>
     `).join("");
 
-    // Click to fly to station
     list.querySelectorAll(".station-item").forEach(item => {
         item.addEventListener("click", () => {
             const lat = parseFloat(item.dataset.lat);
             const lng = parseFloat(item.dataset.lng);
-            const id = parseInt(item.dataset.id);
+            const id = parseInt(item.dataset.id, 10);
             map.flyTo([lat, lng], 15, { duration: 1.5 });
-
-            // Open popup
             const marker = markers.find(m => m.stationId === id);
             if (marker) setTimeout(() => marker.openPopup(), 800);
+        });
+    });
+
+    list.querySelectorAll(".station-nav-btn").forEach(btn => {
+        btn.addEventListener("click", e => {
+            e.stopPropagation();
+            startStationNavigation(parseInt(btn.dataset.id, 10));
         });
     });
 }
@@ -470,20 +965,21 @@ function setupEvents() {
         });
     });
 
-    // Locate me button
     document.getElementById("locateBtn").addEventListener("click", () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    map.flyTo([pos.coords.latitude, pos.coords.longitude], 14, { duration: 1.5 });
-                    L.circle([pos.coords.latitude, pos.coords.longitude], {
-                        radius: 200, color: "#00d4aa", fillOpacity: 0.15, weight: 2
-                    }).addTo(map);
-                    showToast("تم تحديد موقعك");
-                },
-                () => showToast("لم يتم السماح بتحديد الموقع", "error")
-            );
+        if (!navigator.geolocation) {
+            showToast("تحديد الموقع غير مدعوم", "error");
+            return;
         }
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                const { latitude, longitude, accuracy } = pos.coords;
+                updateUserLocation(latitude, longitude, accuracy);
+                map.flyTo([latitude, longitude], 14, { duration: 1.5 });
+                showToast("تم تحديد موقعك");
+            },
+            () => showToast("لم يتم السماح بتحديد الموقع", "error"),
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+        );
     });
 
     // Auto-refresh every 30 seconds
@@ -494,6 +990,7 @@ function setupEvents() {
 document.addEventListener("DOMContentLoaded", () => {
     initPwaInstall();
     initMap();
+    initNavigation();
     setupEvents();
     initMobileBottomSheet();
     fetchStations();

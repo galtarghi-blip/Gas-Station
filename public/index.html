@@ -9,7 +9,7 @@
     <title> خريطة محطات الوقود في ليبيا</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=11">
     <link rel="stylesheet" href="vendor/leaflet.css">
     <link rel="preload" as="style"
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&amp;display=swap"
@@ -123,18 +123,53 @@
         </div>
     </div>
 
+    <!-- Navigation bar (route tracking) -->
+    <aside id="navBar" class="nav-bar" hidden aria-live="polite">
+        <div class="nav-bar-progress" aria-hidden="true">
+            <div class="nav-bar-progress-fill" id="navProgressFill"></div>
+        </div>
+        <div class="nav-bar-inner">
+            <div class="nav-bar-top">
+                <div class="nav-bar-dest">
+                    <span class="nav-bar-label">التوجيه إلى</span>
+                    <strong id="navDestName">—</strong>
+                </div>
+                <button type="button" class="nav-bar-stop" id="navStopBtn" aria-label="إيقاف التتبع">إيقاف</button>
+            </div>
+            <div class="nav-bar-stats">
+                <div class="nav-stat">
+                    <span class="nav-stat-value" id="navDistance">—</span>
+                    <span class="nav-stat-label">المسافة المتبقية</span>
+                </div>
+                <div class="nav-stat-divider" aria-hidden="true"></div>
+                <div class="nav-stat">
+                    <span class="nav-stat-value" id="navEta">—</span>
+                    <span class="nav-stat-label">الوقت التقريبي</span>
+                </div>
+            </div>
+            <div class="nav-bar-actions">
+                <button type="button" class="btn btn-primary btn-sm nav-recenter-btn" id="navRecenterBtn">توسيط على موقعي</button>
+                <button type="button" class="btn btn-outline btn-sm" id="navExternalBtn">فتح في الخرائط</button>
+            </div>
+        </div>
+        <div class="nav-bar-loading" id="navBarLoading" hidden>
+            <div class="spinner nav-spinner"></div>
+            <span>جاري حساب المسار...</span>
+        </div>
+    </aside>
+
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <script src="vendor/leaflet.js" defer></script>
-    <script src="api-config.js" defer></script>
-    <script src="escape.js" defer></script>
-    <script src="app.js" defer></script>
+    <script src="api-config.js?v=11" defer></script>
+    <script src="escape.js?v=11" defer></script>
+    <script src="app.js?v=11" defer></script>
     <script>
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
                 navigator.serviceWorker
-                    .register("sw.js", { scope: "./" })
+                    .register("sw.js?v=11", { scope: "./" })
                     .then(reg => {
                         reg.addEventListener("updatefound", () => {
                             const installing = reg.installing;
