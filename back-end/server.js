@@ -343,6 +343,44 @@ app.post("/api/auth/logout", (req, res) => {
 
 // ==================== STATION ROUTES ====================
 
+// Driving route proxy (OSRM) — avoids browser CORS / blocks on localhost
+app.get("/api/route", async (req, res) => {
+    const { from, to } = req.query;
+    if (!from || !to) {
+        return res.status(400).json({ error: "from و to مطلوبان (lat,lng)" });
+    }
+
+    const parsePair = raw => {
+        const parts = String(raw).split(",").map(s => parseFloat(s.trim()));
+        if (parts.length !== 2 || parts.some(n => !Number.isFinite(n))) return null;
+        return { lat: parts[0], lng: parts[1] };
+    };
+
+    const start = parsePair(from);
+    const end = parsePair(to);
+    if (!start || !end) {
+        return res.status(400).json({ error: "إحداثيات غير صالحة" });
+    }
+
+    const osrmUrl =
+        `https://router.project-osrm.org/route/v1/driving/` +
+        `${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+
+    try {
+        const upstream = await fetch(osrmUrl, {
+            headers: { "User-Agent": "gas-station-libya/1.0" }
+        });
+        const data = await upstream.json();
+        if (!upstream.ok) {
+            return res.status(upstream.status).json(data);
+        }
+        res.json(data);
+    } catch (error) {
+        console.error("Route proxy error:", error);
+        res.status(502).json({ error: "تعذر الاتصال بخدمة المسارات" });
+    }
+});
+
 // Get all active stations (public - for the map)
 app.get("/api/stations", async (req, res) => {
     try {
