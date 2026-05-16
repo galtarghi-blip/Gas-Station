@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>شرح Server.js - محطات الوقود</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0f1a;--card:#1a1a2e;--border:#2a2a4a;--accent:#6c63ff;--accent2:#00d4aa;--text:#e0e0f0;--dim:#8888aa;--warn:#ff6b6b;--success:#00d4aa;--info:#4ea8de;--code-bg:#12121e}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-height:1.8;min-height:100vh}
+.hero{background:linear-gradient(135deg,#1a1a3e 0%,#0f0f1a 50%,#1a1a2e 100%);padding:60px 20px;text-align:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 50%,rgba(108,99,255,.08) 0%,transparent 50%);animation:pulse 8s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.hero h1{font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,#6c63ff,#00d4aa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;position:relative}
+.hero p{color:var(--dim);font-size:1.1rem;position:relative}
+.container{max-width:900px;margin:0 auto;padding:30px 20px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:30px;margin-bottom:24px;transition:transform .2s,box-shadow .2s}
+.section:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(108,99,255,.1)}
+.section h2{font-size:1.4rem;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.section h2 .num{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.section h3{font-size:1.1rem;color:var(--accent2);margin:18px 0 10px;font-weight:600}
+p,li{color:var(--text);margin-bottom:8px}
+ul,ol{padding-right:24px;margin-bottom:12px}
+li{margin-bottom:4px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9rem}
+th{background:rgba(108,99,255,.15);color:var(--accent);padding:10px 12px;text-align:right;border:1px solid var(--border)}
+td{padding:8px 12px;border:1px solid var(--border);color:var(--text)}
+tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin:12px 0;overflow-x:auto;direction:ltr;text-align:left}
+code{font-family:'Fira Code',monospace;font-size:.85rem;color:#a5f3c4}
+.inline-code{background:rgba(108,99,255,.15);color:var(--accent);padding:2px 7px;border-radius:5px;font-size:.85rem;font-family:'Fira Code',monospace}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-get{background:rgba(0,212,170,.15);color:var(--accent2)}
+.badge-post{background:rgba(108,99,255,.15);color:var(--accent)}
+.badge-patch{background:rgba(255,193,7,.15);color:#ffc107}
+.badge-put{background:rgba(78,168,222,.15);color:var(--info)}
+.badge-delete{background:rgba(255,107,107,.15);color:var(--warn)}
+.alert{border-radius:10px;padding:14px 18px;margin:12px 0;font-size:.9rem}
+.alert-warn{background:rgba(255,107,107,.08);border-right:4px solid var(--warn);color:#ff9999}
+.alert-info{background:rgba(78,168,222,.08);border-right:4px solid var(--info);color:#88ccee}
+.alert-success{background:rgba(0,212,170,.08);border-right:4px solid var(--success);color:#66eebb}
+.api-route{background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.api-route .path{font-family:'Fira Code',monospace;font-size:.85rem;color:var(--text)}
+.api-route .desc{color:var(--dim);font-size:.85rem}
+.footer{text-align:center;padding:40px 20px;color:var(--dim);font-size:.9rem;border-top:1px solid var(--border)}
+@media(max-width:600px){.hero h1{font-size:1.8rem}.section{padding:20px}.api-route{flex-direction:column;align-items:flex-start;gap:4px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+<h1>📋 شرح ملف Server.js</h1>
+<p>الخادم الرئيسي لمشروع محطات الوقود في ليبيا — Express.js + MySQL</p>
+</div>
+
+<div class="container">
+
+<!-- القسم 1 -->
+<div class="section">
+<h2><span class="num">1</span> استيراد المكتبات</h2>
+<p>السطور 1–7: يستورد الملف المكتبات الأساسية:</p>
+<table>
+<tr><th>المكتبة</th><th>الوظيفة</th></tr>
+<tr><td><span class="inline-code">compression</span></td><td>ضغط الاستجابات (gzip) لتسريع التحميل</td></tr>
+<tr><td><span class="inline-code">express</span></td><td>إطار العمل الأساسي للخادم والـ API</td></tr>
+<tr><td><span class="inline-code">path</span></td><td>التعامل مع مسارات الملفات بأمان</td></tr>
+<tr><td><span class="inline-code">mysql2/promise</span></td><td>الاتصال بـ MySQL مع دعم async/await</td></tr>
+<tr><td><span class="inline-code">crypto</span></td><td>توليد رموز جلسات عشوائية آمنة</td></tr>
+<tr><td><span class="inline-code">bcryptjs</span></td><td>تشفير كلمات المرور بخوارزمية bcrypt</td></tr>
+<tr><td><span class="inline-code">express-rate-limit</span></td><td>حماية من هجمات القوة الغاشمة</td></tr>
+</table>
+</div>
+
+<!-- القسم 2 -->
+<div class="section">
+<h2><span class="num">2</span> إعداد التطبيق و CORS</h2>
+<p>يعمل الخادم على المنفذ <span class="inline-code">3000</span> مع تفعيل <span class="inline-code">trust proxy</span> للعمل خلف Render/Railway.</p>
+<h3>المصادر المسموحة</h3>
+<ul>
+<li>عناوين الإنتاج على Render</li>
+<li>عناوين التطوير المحلي (localhost:3000, localhost:5500)</li>
+<li>يمكن تخصيصها عبر متغير البيئة <span class="inline-code">ALLOWED_ORIGINS</span></li>
+</ul>
+<h3>CORS Middleware</h3>
+<ol>
+<li>يقرأ الـ origin من رأس الطلب</li>
+<li>يتحقق هل هو ضمن القائمة المسموحة</li>
+<li>يسمح بـ Headers: Content-Type, Authorization</li>
+<li>يسمح بـ Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS</li>
+<li>يرد فوراً على طلبات OPTIONS (preflight) بالحالة 200</li>
+</ol>
+</div>
+
+<!-- القسم 3 -->
+<div class="section">
+<h2><span class="num">3</span> Middlewares الأساسية</h2>
+<table>
+<tr><th>Middleware</th><th>الوظيفة</th></tr>
+<tr><td><span class="inline-code">loginLimiter</span></td><td>80 محاولة تسجيل دخول كحد أقصى كل 15 دقيقة</td></tr>
+<tr><td><span class="inline-code">compression</span></td><td>ضغط الاستجابات التي تتجاوز 1 كيلوبايت</td></tr>
+<tr><td><span class="inline-code">express.json()</span></td><td>فهم بيانات JSON في الطلبات</td></tr>
+<tr><td><span class="inline-code">express.urlencoded</span></td><td>فهم بيانات النماذج (forms)</td></tr>
+<tr><td><span class="inline-code">express.static</span></td><td>تقديم الملفات الثابتة من مجلد public/</td></tr>
+</table>
+<h3>سياسة Cache</h3>
+<ul>
+<li><strong>HTML</strong>: لا يُخزّن مؤقتاً — دائماً أحدث نسخة</li>
+<li><strong>JS, CSS, صور</strong>: تُخزّن يوم واحد مع إعادة تحقق 7 أيام</li>
+</ul>
+</div>
+
+<!-- القسم 4 -->
+<div class="section">
+<h2><span class="num">4</span> إعداد قاعدة البيانات MySQL</h2>
+<p><strong>الربط الذكي:</strong> يحاول أولاً استخدام متغيرات البيئة (للسيرفر السحابي)، وإلا يستخدم القيم الافتراضية (للتطوير المحلي).</p>
+<pre><code>host: process.env.MYSQLHOST || "localhost"
+user: process.env.MYSQLUSER || "root"
+password: process.env.MYSQLPASSWORD || "Root@123"
+database: process.env.MYSQL_DATABASE || "gas_station_db"
+port: process.env.MYSQLPORT || 3306
+connectionLimit: 10
+ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false</code></pre>
+<div class="alert alert-info">يُفعّل SSL فقط على السيرفر السحابي. يستخدم Connection Pool بحد أقصى 10 اتصالات متزامنة.</div>
+</div>
+
+<!-- القسم 5 -->
+<div class="section">
+<h2><span class="num">5</span> نظام الجلسات والمصادقة</h2>
+<p>الجلسات مُخزّنة في <span class="inline-code">Map()</span> في الذاكرة بمدة صلاحية <strong>7 أيام</strong>.</p>
+<div class="alert alert-warn">⚠️ تُفقد الجلسات عند إعادة تشغيل الخادم — جميع المستخدمين سيحتاجون لتسجيل الدخول مجدداً.</div>
+
+<h3>ترحيل كلمات المرور (Lazy Migration)</h3>
+<p>دالة <span class="inline-code">verifyPasswordWithMigration</span>:</p>
+<ol>
+<li>تتحقق هل كلمة المرور بصيغة <strong>bcrypt</strong> (تبدأ بـ $2a$ أو $2b$)</li>
+<li>إذا نعم ← تقارنها مباشرة</li>
+<li>إذا لا ← تفترض أنها <strong>SHA-256 قديمة</strong></li>
+<li>إذا تطابقت ← تُرقّي تلقائياً إلى bcrypt في قاعدة البيانات</li>
+</ol>
+<div class="alert alert-success">✅ هذا يسمح بترقية كلمات المرور القديمة تلقائياً دون إجبار المستخدمين على تغييرها.</div>
+
+<h3>دوال مساعدة</h3>
+<table>
+<tr><th>الدالة</th><th>الوظيفة</th></tr>
+<tr><td><span class="inline-code">generateToken()</span></td><td>يولّد رمز جلسة عشوائي (64 حرف hex)</td></tr>
+<tr><td><span class="inline-code">getToken(req)</span></td><td>يستخرج الرمز من رأس Authorization: Bearer</td></tr>
+<tr><td><span class="inline-code">authenticateAdmin</span></td><td>يتحقق من الجلسة — يسمح لأي مسؤول</td></tr>
+<tr><td><span class="inline-code">authenticateSuperAdmin</span></td><td>يتحقق من الجلسة + يشترط دور super_admin</td></tr>
+</table>
+</div>
+
+<!-- القسم 6 -->
+<div class="section">
+<h2><span class="num">6</span> تهيئة قاعدة البيانات — الجداول</h2>
+<p>دالة <span class="inline-code">initDatabase()</span> تُنشئ 3 جداول:</p>
+
+<h3>جدول admins (المسؤولين)</h3>
+<table>
+<tr><th>العمود</th><th>النوع</th><th>الوصف</th></tr>
+<tr><td>id</td><td>INT AUTO_INCREMENT</td><td>المعرّف الفريد</td></tr>
+<tr><td>username</td><td>VARCHAR(100) UNIQUE</td><td>اسم المستخدم</td></tr>
+<tr><td>password_hash</td><td>VARCHAR(255)</td><td>كلمة المرور المشفرة</td></tr>
+<tr><td>full_name</td><td>VARCHAR(200)</td><td>الاسم الكامل</td></tr>
+<tr><td>phone</td><td>VARCHAR(20)</td><td>رقم الهاتف</td></tr>
+<tr><td>role</td><td>ENUM</td><td>super_admin أو manager</td></tr>
+</table>
+
+<h3>جدول stations (المحطات)</h3>
+<table>
+<tr><th>العمود</th><th>النوع</th><th>الوصف</th></tr>
+<tr><td>id</td><td>INT AUTO_INCREMENT</td><td>المعرّف الفريد</td></tr>
+<tr><td>admin_id</td><td>INT (FK)</td><td>معرّف المدير المالك</td></tr>
+<tr><td>name, city, address</td><td>VARCHAR</td><td>بيانات المحطة</td></tr>
+<tr><td>latitude / longitude</td><td>DECIMAL</td><td>الإحداثيات الجغرافية</td></tr>
+<tr><td>is_active</td><td>BOOLEAN</td><td>هل المحطة نشطة</td></tr>
+<tr><td>fuel_type</td><td>ENUM</td><td>benzine / diesel / both</td></tr>
+</table>
+
+<h3>جدول activity_log (سجل النشاط)</h3>
+<table>
+<tr><th>العمود</th><th>النوع</th><th>الوصف</th></tr>
+<tr><td>station_id</td><td>INT (FK)</td><td>معرّف المحطة</td></tr>
+<tr><td>action</td><td>ENUM</td><td>activated أو deactivated</td></tr>
+<tr><td>timestamp</td><td>TIMESTAMP</td><td>وقت الإجراء</td></tr>
+</table>
+
+<div class="alert alert-warn">⚠️ حساب Super Admin الافتراضي: اسم المستخدم <span class="inline-code">admin</span> وكلمة المرور <span class="inline-code">admin123</span> — يجب تغييرها في الإنتاج!</div>
+</div>
+
+<!-- القسم 7 -->
+<div class="section">
+<h2><span class="num">7</span> مسارات المصادقة (AUTH)</h2>
+
+<div class="api-route">
+<span class="badge badge-post">POST</span>
+<span class="path">/api/auth/register</span>
+<span class="desc">— إنشاء حساب مدير (Super Admin فقط)</span>
+</div>
+<p>يتحقق من: جميع الحقول مطلوبة + كلمة المرور ≥ 6 أحرف. يُنشئ حساب بدور manager.</p>
+
+<div class="api-route">
+<span class="badge badge-post">POST</span>
+<span class="path">/api/auth/login</span>
+<span class="desc">— تسجيل الدخول (محمي بـ Rate Limiter)</span>
+</div>
+<p>يبحث عن المستخدم → يتحقق من كلمة المرور (مع ترحيل) → يولّد رمز جلسة (7 أيام) → يُرجع الرمز + بيانات المسؤول.</p>
+
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/auth/me</span>
+<span class="desc">— التحقق من الجلسة الحالية</span>
+</div>
+<p>يتحقق من صلاحية الرمز ويُرجع بيانات المسؤول.</p>
+
+<div class="api-route">
+<span class="badge badge-post">POST</span>
+<span class="path">/api/auth/logout</span>
+<span class="desc">— تسجيل الخروج</span>
+</div>
+<p>يحذف رمز الجلسة من الذاكرة.</p>
+</div>
+
+<!-- القسم 8 -->
+<div class="section">
+<h2><span class="num">8</span> مسارات المحطات (STATIONS)</h2>
+
+<h3>المسارات العامة (بدون مصادقة)</h3>
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/stations</span>
+<span class="desc">— جلب جميع المحطات مع اسم المدير (للخريطة)</span>
+</div>
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/stations/active</span>
+<span class="desc">— جلب المحطات النشطة فقط</span>
+</div>
+
+<h3>مسارات المدير (تحتاج authenticateAdmin)</h3>
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/admin/stations</span>
+<span class="desc">— جلب محطات المدير الحالي + عدد التفعيلات</span>
+</div>
+<div class="api-route">
+<span class="badge badge-post">POST</span>
+<span class="path">/api/admin/stations</span>
+<span class="desc">— إضافة محطة جديدة (يتحقق أن الموقع داخل ليبيا)</span>
+</div>
+<div class="api-route">
+<span class="badge badge-patch">PATCH</span>
+<span class="path">/api/admin/stations/:id/toggle</span>
+<span class="desc">— تبديل حالة المحطة (نشطة ↔ غير نشطة) + تسجيل في activity_log</span>
+</div>
+<div class="api-route">
+<span class="badge badge-patch">PATCH</span>
+<span class="path">/api/admin/stations/:id/fuel</span>
+<span class="desc">— تحديث نوع الوقود (benzine/diesel/both)</span>
+</div>
+<div class="api-route">
+<span class="badge badge-put">PUT</span>
+<span class="path">/api/admin/stations/:id</span>
+<span class="desc">— تحديث بيانات المحطة بالكامل</span>
+</div>
+<div class="api-route">
+<span class="badge badge-delete">DELETE</span>
+<span class="path">/api/admin/stations/:id</span>
+<span class="desc">— حذف محطة</span>
+</div>
+<div class="alert alert-info">ℹ️ جميع مسارات المدير تتحقق من ملكية المحطة — المدير يرى/يعدّل محطاته فقط. الإحداثيات يجب أن تكون داخل ليبيا (خط العرض 19–34، خط الطول 9–26).</div>
+</div>
+
+<!-- القسم 9 -->
+<div class="section">
+<h2><span class="num">9</span> الإحصائيات والمدير الأعلى</h2>
+
+<h3>إحصائيات عامة</h3>
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/stats</span>
+<span class="desc">— إجمالي المحطات + النشطة + المدن (بدون مصادقة)</span>
+</div>
+
+<h3>مسارات المدير الأعلى (Super Admin فقط)</h3>
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/super/managers</span>
+<span class="desc">— جلب جميع المديرين مع عدد محطاتهم</span>
+</div>
+<div class="api-route">
+<span class="badge badge-delete">DELETE</span>
+<span class="path">/api/super/managers/:id</span>
+<span class="desc">— حذف مدير (يحذف محطاته تلقائياً CASCADE)</span>
+</div>
+<div class="api-route">
+<span class="badge badge-get">GET</span>
+<span class="path">/api/super/stations</span>
+<span class="desc">— جلب جميع المحطات مع بيانات المدير</span>
+</div>
+</div>
+
+<!-- القسم 10 -->
+<div class="section">
+<h2><span class="num">10</span> تقديم الصفحات وتشغيل الخادم</h2>
+<h3>الصفحات</h3>
+<table>
+<tr><th>المسار</th><th>الصفحة</th><th>الوصف</th></tr>
+<tr><td><span class="inline-code">/</span></td><td>index.html</td><td>الصفحة الرئيسية (خريطة المحطات)</td></tr>
+<tr><td><span class="inline-code">/admin</span></td><td>admin.html</td><td>لوحة تحكم مدير المحطات</td></tr>
+<tr><td><span class="inline-code">/superadmin</span></td><td>superadmin.html</td><td>لوحة تحكم المدير الأعلى</td></tr>
+</table>
+<h3>ترتيب التشغيل</h3>
+<ol>
+<li>تهيئة قاعدة البيانات (إنشاء الجداول + حساب المدير الأعلى)</li>
+<li>بدء الاستماع على المنفذ 3000</li>
+</ol>
+</div>
+
+<!-- ملخص الأمان -->
+<div class="section">
+<h2><span class="num">🛡️</span> ملخص ميزات الأمان</h2>
+<table>
+<tr><th>الميزة</th><th>التفاصيل</th></tr>
+<tr><td>تشفير كلمات المرور</td><td>bcrypt مع 12 جولة</td></tr>
+<tr><td>حماية من القوة الغاشمة</td><td>Rate Limiting — 80 محاولة / 15 دقيقة</td></tr>
+<tr><td>CORS محدود</td><td>فقط المصادر المسموحة</td></tr>
+<tr><td>التحقق من الملكية</td><td>المدير يرى/يعدّل محطاته فقط</td></tr>
+<tr><td>نظام أدوار</td><td>super_admin و manager بصلاحيات مختلفة</td></tr>
+<tr><td>ترحيل كلمات المرور</td><td>ترقية تلقائية من SHA-256 إلى bcrypt</td></tr>
+<tr><td>SSL للقاعدة</td><td>تشفير الاتصال على السيرفر السحابي</td></tr>
+</table>
+</div>
+
+</div>
+
+<div class="footer">
+<p>📋 شرح تفصيلي لملف server.js — مشروع محطات الوقود في ليبيا</p>
+</div>
+
+</body>
+</html>

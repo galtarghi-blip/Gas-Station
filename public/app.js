@@ -1,8 +1,4 @@
-// Map page JavaScript - Citizens view
-const API_BASE =
-    typeof location !== "undefined" && location.origin && location.protocol.startsWith("http")
-        ? location.origin
-        : "https://gas-station-kq3v.onrender.com";
+// Map page JavaScript - Citizens view (API_BASE from api-config.js)
 
 // State
 let map;

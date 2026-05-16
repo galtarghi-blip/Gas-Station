@@ -1,8 +1,4 @@
-// Admin Dashboard JavaScript
-const API =
-    typeof location !== "undefined" && location.origin && location.protocol.startsWith("http")
-        ? location.origin
-        : "https://gas-station-kq3v.onrender.com";
+// Admin Dashboard JavaScript (API from api-config.js)
 
 // Session token stored in sessionStorage (clears when browser closes)
 let token = sessionStorage.getItem("admin_token") || null;
