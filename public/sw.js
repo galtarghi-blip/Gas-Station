@@ -1,4 +1,4 @@
-const CACHE_NAME = "gas-station-cache-v11";
+const CACHE_NAME = "gas-station-cache-v12";
 
 const urlsToCache = [
     "./",

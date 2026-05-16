@@ -410,6 +410,31 @@ function hideNavBar() {
     const bar = document.getElementById("navBar");
     if (bar) bar.hidden = true;
     document.body.classList.remove("nav-active");
+    collapseNavDetails();
+}
+
+function collapseNavDetails() {
+    const details = document.getElementById("navBarDetails");
+    const btn = document.getElementById("navExpandBtn");
+    const bar = document.getElementById("navBar");
+    if (details) details.hidden = true;
+    if (btn) {
+        btn.setAttribute("aria-expanded", "false");
+        btn.textContent = "⋯";
+    }
+    bar?.classList.remove("nav-bar--expanded");
+}
+
+function toggleNavDetails() {
+    const details = document.getElementById("navBarDetails");
+    const btn = document.getElementById("navExpandBtn");
+    const bar = document.getElementById("navBar");
+    if (!details || !btn) return;
+    const opening = details.hidden;
+    details.hidden = !opening;
+    btn.setAttribute("aria-expanded", opening ? "true" : "false");
+    btn.textContent = opening ? "▾" : "⋯";
+    bar?.classList.toggle("nav-bar--expanded", opening);
 }
 
 function clearRouteLayers() {
@@ -673,6 +698,7 @@ async function startStationNavigation(stationId) {
     if (isMobileSheetLayout()) setSheetState("collapsed");
 
     showNavBar(station);
+    collapseNavDetails();
     setNavBarLoading(true);
     navNearNotified = false;
     navFollowEnabled = true;
@@ -797,6 +823,10 @@ function initNavigation() {
 
     document.getElementById("navExternalBtn")?.addEventListener("click", () => {
         if (navigationState?.station) openStationInMaps(navigationState.station);
+    });
+
+    document.getElementById("navExpandBtn")?.addEventListener("click", () => {
+        toggleNavDetails();
     });
 }
 
